@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Talis Scans</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Talis</h1>
+    <span id="status" class="status">Connecting…</span>
+  </header>
+
+  <main>
+    <section class="stats">
+      <div class="stat"><span class="label">Total scans</span><span id="total" class="value">–</span></div>
+      <div class="stat"><span class="label">Unique cards</span><span id="unique" class="value">–</span></div>
+      <div class="stat"><span class="label">Last scan</span><span id="last" class="value small">–</span></div>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>Recent scans</h2>
+        <table>
+          <thead><tr><th>Card UID</th><th>Time</th></tr></thead>
+          <tbody id="feed"><tr><td colspan="2" class="empty">No scans yet. Tap a card on the reader.</td></tr></tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h2>Cards</h2>
+        <table>
+          <thead><tr><th>Card UID</th><th>Scans</th><th>Last seen</th></tr></thead>
+          <tbody id="cards"><tr><td colspan="3" class="empty">–</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

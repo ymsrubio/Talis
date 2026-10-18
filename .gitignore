@@ -1,0 +1,6 @@
+# Local credentials: copy the *.example files and fill them in
+firmware/talis_rfid/secrets.h
+web/config.js
+.env
+.env.*
+!.env.example
