@@ -18,6 +18,20 @@ web/                   static dashboard (no build step)
    python3 -m http.server 8080 --directory web
    ```
 
-   Then open http://localhost:8080. To deploy, point Vercel/Netlify/GitHub Pages at the `web/` folder.
+   Then open http://localhost:8080.
+
+## Deploy
+
+The site is static; the only build step writes `web/config.js` from two environment variables.
+
+Set these in the host's dashboard:
+
+| Variable | Value |
+| --- | --- |
+| `SUPABASE_URL` | `https://<project>.supabase.co` |
+| `SUPABASE_KEY` | your publishable key |
+
+- **Vercel** – import the repo; `vercel.json` already sets the build command and output folder. Leave the root directory as the repo root.
+- **Cloudflare Pages** – import the repo, framework preset *None*, build command `sh scripts/build-config.sh`, build output directory `web`.
 
 `secrets.h` and `config.js` are gitignored, so your credentials stay local.
