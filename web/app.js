@@ -1,11 +1,28 @@
 import { seatMap } from "./seat-map.js";
+import { STATUS_KINDS, statusByCard, statusOf, sameStatus, statusText, countStatuses } from "./status.js";
 
 const { supabaseUrl, supabaseKey } = window.TALIS_CONFIG;
 const db = supabase.createClient(supabaseUrl, supabaseKey);
 
 const $ = (id) => document.getElementById(id);
 
-const clockIcon = (size) => `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.4"/></svg>`;
+const ICONS = {
+  clock: '<circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.4"/>',
+  bus: '<rect x="2.5" y="3" width="11" height="9" rx="2"/><path d="M2.5 8h11M5 12v1.5M11 12v1.5"/>',
+  check: '<circle cx="8" cy="8" r="6"/><path d="M5.5 8.2l1.8 1.8 3.2-3.6"/>',
+};
+
+const icon = (id, size) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[id]}</svg>`;
+
+const LIVE_TEXT = { connecting: "Connecting", live: "Live", offline: "Offline" };
+
+let layout = null;
+let riders = [];
+let scans = [];
+let statuses = new Map();
+let openUid = null;
+let openKey = null;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -24,7 +41,61 @@ function showNotice(text) {
   notice.hidden = !text;
 }
 
-function drawSeatMap(layout, riders) {
+function setLive(state) {
+  const live = $("live");
+  live.dataset.state = state;
+  live.textContent = LIVE_TEXT[state];
+}
+
+function drawDate() {
+  $("today").textContent =
+    "Bus attendance · " + new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+}
+
+function statusChip(kind) {
+  const { label, css, icon: iconId } = STATUS_KINDS[kind];
+  const chip = el("span", `badge badge-${css}`);
+  chip.innerHTML = icon(iconId, 16);
+  chip.append(label);
+  return chip;
+}
+
+function drawLegend() {
+  const items = Object.keys(STATUS_KINDS).map((kind) => {
+    const li = el("li");
+    li.append(statusChip(kind));
+    return li;
+  });
+  $("legend").prepend(...items);
+}
+
+function drawCounts() {
+  const counts = countStatuses(riders, statuses);
+  $("counts").replaceChildren(
+    ...["on", "off", "not"].map((kind) => {
+      const li = el("li", "count");
+      li.append(statusChip(kind), el("span", "count-num", counts[kind]));
+      return li;
+    }),
+  );
+}
+
+function seatButton(c, status) {
+  const { css, icon: iconId } = STATUS_KINDS[status.kind];
+  const button = el("button", `seat seat-btn seat-${css}`);
+  button.type = "button";
+  button.dataset.uid = c.rider.uid;
+  button.dataset.key = `seat:${c.rider.uid}`;
+  const top = el("span", "seat-top");
+  top.append(srOnly("Seat "), el("span", "seat-num", c.seat));
+  top.insertAdjacentHTML("beforeend", icon(iconId, 14));
+  button.append(top, el("span", "seat-name", c.rider.first), srOnly(`, ${statusText(status)}`));
+  button.title = c.rider.name;
+  button.addEventListener("click", () => openDetails(c.rider.uid, button.dataset.key));
+  return button;
+}
+
+function drawSeatMap() {
   const { columns, cells } = seatMap(layout, riders);
   const grid = $("bus-grid");
   grid.style.gridTemplateColumns = columns
@@ -44,55 +115,157 @@ function drawSeatMap(layout, riders) {
         li.classList.add("seat", "seat-empty");
         li.append(srOnly("Seat "), el("span", "seat-num", c.seat), srOnly(", empty"));
       } else {
-        li.classList.add("seat", "seat-not");
-        const top = el("span", "seat-top");
-        top.append(srOnly("Seat "), el("span", "seat-num", c.seat));
-        top.insertAdjacentHTML("beforeend", clockIcon(14));
-        li.append(top, el("span", "seat-name", c.rider.first), srOnly(", Not yet"));
-        li.title = c.rider.name;
+        li.append(seatButton(c, statusOf(statuses, c.rider.uid)));
       }
       return li;
     }),
   );
 }
 
-function drawRiderList(riders) {
+function riderRow(r) {
+  const status = statusOf(statuses, r.card_uid);
+  const li = el("li");
+  const button = el("button", "rider-row");
+  button.type = "button";
+  button.dataset.uid = r.card_uid;
+  button.dataset.key = `row:${r.card_uid}`;
+  const who = el("span", "rider-who");
+  who.append(el("span", "rider-name", r.name), el("span", "rider-sub", `Seat ${r.seat} · ${statusText(status)}`));
+  button.append(who, statusChip(status.kind));
+  button.addEventListener("click", () => openDetails(r.card_uid, button.dataset.key));
+  li.append(button);
+  return li;
+}
+
+function drawRiderList() {
   const list = $("rider-list");
   if (riders.length === 0) {
     list.replaceChildren(el("li", "empty-note", "No riders yet. Riders will appear here once they are registered."));
     return;
   }
   const sorted = [...riders].sort((a, b) => a.name.localeCompare(b.name));
-  list.replaceChildren(
-    ...sorted.map((r) => {
-      const li = el("li", "rider-row");
-      const who = el("span", "rider-who");
-      who.append(el("span", "rider-name", r.name), el("span", "rider-sub", `Seat ${r.seat} · No tap yet`));
-      const badge = el("span", "badge badge-not");
-      badge.innerHTML = clockIcon(16);
-      badge.append("Not yet");
-      li.append(who, badge);
-      return li;
-    }),
-  );
+  list.replaceChildren(...sorted.map(riderRow));
+}
+
+function openDetails(uid, key) {
+  openUid = uid;
+  openKey = key;
+  fillDetails();
+  $("details").showModal();
+}
+
+function fillDetails() {
+  const rider = riders.find((r) => r.card_uid === openUid);
+  if (!rider) return;
+  const status = statusOf(statuses, rider.card_uid);
+  $("details-name").textContent = rider.name;
+  $("details-seat").textContent = `Seat ${rider.seat}`;
+  $("details-status").replaceChildren(statusChip(status.kind));
+  $("details-time").textContent = statusText(status);
+}
+
+const withUid = (uid) => [...document.querySelectorAll("[data-uid]")].filter((n) => n.dataset.uid === uid);
+
+function flash(node) {
+  node.classList.add("flash");
+  node.addEventListener("animationend", () => node.classList.remove("flash"), { once: true });
+}
+
+function render(changed) {
+  const focusedKey = document.activeElement?.dataset?.key;
+  drawCounts();
+  drawSeatMap();
+  drawRiderList();
+  for (const uid of changed) withUid(uid).forEach(flash);
+  if (focusedKey) document.querySelector(`[data-key="${CSS.escape(focusedKey)}"]`)?.focus();
+  if ($("details").open) fillDetails();
+}
+
+// A Rider's Seat and row flash only when their Status really changed, so a
+// double tap inside the 60 s window stays silent.
+function update({ flashChanges }) {
+  const previous = statuses;
+  statuses = statusByCard(scans, new Date());
+  const changed = new Set();
+  if (flashChanges) {
+    for (const r of riders) {
+      if (!sameStatus(statusOf(previous, r.card_uid), statusOf(statuses, r.card_uid))) changed.add(r.card_uid);
+    }
+  }
+  render(changed);
+}
+
+function localMidnight() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+async function refreshScans({ flashChanges }) {
+  const { data, error } = await db
+    .from("scans")
+    .select("uid, scanned_at")
+    .gte("scanned_at", localMidnight().toISOString());
+  if (error) showNotice(`Could not load today's taps: ${error.message}`);
+  else scans = data;
+  update({ flashChanges });
 }
 
 async function load() {
-  const [layout, riders] = await Promise.all([
+  const [layoutRes, ridersRes] = await Promise.all([
     db.from("bus_layout").select("grid_row, grid_col, col_span, seat, fixture"),
-    db.from("riders").select("name, seat"),
+    db.from("riders").select("card_uid, name, seat"),
   ]);
-  const error = layout.error || riders.error;
+  const error = layoutRes.error || ridersRes.error;
   if (error) {
     showNotice(`Could not load the bus: ${error.message}`);
     return;
   }
   showNotice("");
-  drawSeatMap(layout.data, riders.data);
-  drawRiderList(riders.data);
+  layout = layoutRes.data;
+  riders = ridersRes.data;
+  await refreshScans({ flashChanges: false });
+  subscribe();
+  scheduleMidnight();
 }
 
-$("today").textContent =
-  "Bus attendance · " + new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+function subscribe() {
+  db.channel("scans-live")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "scans" }, ({ new: row }) => {
+      scans.push(row);
+      update({ flashChanges: true });
+    })
+    .subscribe((state) => {
+      if (state === "SUBSCRIBED") {
+        setLive("live");
+        // Catch up on Taps missed while connecting or offline.
+        refreshScans({ flashChanges: true });
+      } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT" || state === "CLOSED") {
+        setLive("offline");
+      }
+    });
+}
 
+function scheduleMidnight() {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  setTimeout(() => {
+    drawDate();
+    refreshScans({ flashChanges: false });
+    scheduleMidnight();
+  }, next - now + 1000);
+}
+
+const details = $("details");
+$("details-close").addEventListener("click", () => details.close());
+details.addEventListener("click", (e) => {
+  if (e.target === details) details.close();
+});
+details.addEventListener("close", () => {
+  openUid = null;
+  document.querySelector(`[data-key="${CSS.escape(openKey)}"]`)?.focus();
+});
+
+drawDate();
+drawLegend();
+setLive("connecting");
 load();
