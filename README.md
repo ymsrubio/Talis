@@ -21,6 +21,15 @@ tests/                 node --test unit tests for the page logic
 
    Then open http://localhost:8080 for the Parent page and http://localhost:8080/admin to register an Unknown Card as a Rider, or edit and remove Riders. Run the unit tests (seat map layout, Status rules, Unknown Cards and the Riders table) with `npm test` (Node 20+, no dependencies).
 
+## Using the app
+
+The live address is the `<project>.pages.dev` URL Cloudflare shows after the first deploy: **`https://<project>.pages.dev` (placeholder, no project exists yet)**. Locally, use the serve steps in Setup (http://localhost:8080).
+
+- **Parent page, `/`** – shows the bus seat map with each Rider in their Seat and their live Status. Type a child's name in the search box to find them.
+- **Admin page, `/admin`** – register an Unknown Card (a Card that was tapped but isn't a Rider yet) by giving it a name and a Seat, and rename, move or remove existing Riders.
+
+There are no logins for now, so anyone with the address can open `/admin`. Protecting it is tracked in #15.
+
 ## Deploy to Cloudflare Pages
 
 The site is static; the only build step writes `web/config.js` from two environment variables. `/admin` works as is: Pages serves `web/admin/index.html` and redirects `/admin` to `/admin/`.
