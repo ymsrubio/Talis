@@ -21,18 +21,28 @@ tests/                 node --test unit tests for the page logic
 
    Then open http://localhost:8080 for the Parent page and http://localhost:8080/admin to register an Unknown Card as a Rider, or edit and remove Riders. Run the unit tests (seat map layout, Status rules, Unknown Cards and the Riders table) with `npm test` (Node 20+, no dependencies).
 
-## Deploy
+## Using the app
 
-The site is static; the only build step writes `web/config.js` from two environment variables.
+The live address is the `<project-name>.pages.dev` address Cloudflare shows after the first deploy: **`https://<project-name>.pages.dev` (placeholder, no project exists yet)**. Locally, use the serve steps in Setup (http://localhost:8080).
 
-Set these in the host's dashboard:
+- **Parent page, `/`** – shows the bus seat map with each Rider in their Seat and their live Status. Type a child's name in the search box to find them.
+- **Admin page, `/admin`** – register an Unknown Card (a Card that was tapped but isn't a Rider yet) by giving it a name and a Seat, and rename, move or remove existing Riders.
 
-| Variable | Value |
-| --- | --- |
-| `SUPABASE_URL` | `https://<project>.supabase.co` |
-| `SUPABASE_KEY` | your publishable key |
+There are no logins for now, so anyone with the address can open `/admin`. Protecting it is tracked in #15.
 
-- **Vercel** – import the repo; `vercel.json` already sets the build command and output folder. Leave the root directory as the repo root.
-- **Cloudflare Pages** – import the repo, framework preset *None*, build command `sh scripts/build-config.sh`, build output directory `web`.
+## Deploy to Cloudflare Pages
 
-`secrets.h` and `config.js` are gitignored, so your credentials stay local.
+The site is static; the only build step writes `web/config.js` from two environment variables. `/admin` works as is: Pages serves `web/admin/index.html` and redirects `/admin` to `/admin/`.
+
+1. In the Cloudflare dashboard, go to *Workers & Pages* → *Create* → the *Pages* tab → *Connect to Git*, and pick this GitHub repo.
+2. Build settings: framework preset *None*, build command `sh scripts/build-config.sh`, build output directory `web`, root directory left empty. There is no deploy command.
+3. Add these variables (under *Environment variables* during setup, or later in *Settings* → *Variables and Secrets*). Set them for Production, and for Preview if you want preview deploys to work:
+
+   | Variable | Value |
+   | --- | --- |
+   | `SUPABASE_URL` | `https://<project>.supabase.co` |
+   | `SUPABASE_KEY` | your publishable key (never the secret key) |
+
+4. Save and deploy. The build fails with a clear message if either variable is missing.
+
+`secrets.h` and `config.js` are gitignored, so your credentials stay local. Note that `/admin` is open to anyone with the URL until it gets a login.

@@ -1,4 +1,0 @@
-{
-  "buildCommand": "sh scripts/build-config.sh",
-  "outputDirectory": "web"
-}
