@@ -90,3 +90,13 @@ begin
   alter publication supabase_realtime add table public.riders;
 exception when duplicate_object then null;
 end $$;
+
+-- Also open for now: anyone with the publishable key can rename, move or remove a Rider.
+-- The unique constraints on seat and the name check still apply to updates.
+drop policy if exists "anon can edit riders" on public.riders;
+create policy "anon can edit riders" on public.riders
+  for update to anon using (true) with check (true);
+
+drop policy if exists "anon can remove riders" on public.riders;
+create policy "anon can remove riders" on public.riders
+  for delete to anon using (true);
