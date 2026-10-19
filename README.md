@@ -19,7 +19,7 @@ tests/                 node --test unit tests for the page logic
    python3 -m http.server 8080 --directory web
    ```
 
-   Then open http://localhost:8080 for the Parent page and http://localhost:8080/admin to register an Unknown Card as a Rider. Run the unit tests with `npm test` (Node 20+, no dependencies).
+   Then open http://localhost:8080 for the Parent page and http://localhost:8080/admin to register an Unknown Card as a Rider. Run the unit tests (seat map layout, Status rules and Unknown Cards) with `npm test` (Node 20+, no dependencies).
 
 ## Deploy
 
