@@ -3,42 +3,49 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Talis Scans</title>
+  <title>Talis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <h1>Talis</h1>
-    <span id="status" class="status">Connecting…</span>
-  </header>
-
-  <main>
-    <section class="stats">
-      <div class="stat"><span class="label">Total scans</span><span id="total" class="value">–</span></div>
-      <div class="stat"><span class="label">Unique cards</span><span id="unique" class="value">–</span></div>
-      <div class="stat"><span class="label">Last scan</span><span id="last" class="value small">–</span></div>
-    </section>
-
-    <section class="grid">
-      <div class="panel">
-        <h2>Recent scans</h2>
-        <table>
-          <thead><tr><th>Card UID</th><th>Time</th></tr></thead>
-          <tbody id="feed"><tr><td colspan="2" class="empty">No scans yet. Tap a card on the reader.</td></tr></tbody>
-        </table>
+  <div class="page">
+    <header class="masthead">
+      <svg class="logo" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><rect x="3" y="5" width="30" height="26" rx="7" fill="#F5B800"/><rect x="7" y="9" width="22" height="9" rx="2.5" fill="#0F1720"/><circle cx="11" cy="24" r="2.2" fill="#0F1720"/><circle cx="25" cy="24" r="2.2" fill="#0F1720"/></svg>
+      <div class="wordmark">
+        <h1>Talis</h1>
+        <span id="today" class="subtitle">Bus attendance</span>
       </div>
-      <div class="panel">
-        <h2>Cards</h2>
-        <table>
-          <thead><tr><th>Card UID</th><th>Scans</th><th>Last seen</th></tr></thead>
-          <tbody id="cards"><tr><td colspan="3" class="empty">–</td></tr></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+    </header>
+
+    <p id="notice" class="notice" hidden></p>
+
+    <div class="columns">
+      <section class="seat-map" aria-labelledby="seat-map-title">
+        <div class="section-head">
+          <h2 id="seat-map-title">Seat map</h2>
+          <ul class="legend" aria-label="Legend">
+            <li><span class="swatch swatch-not"></span>Not yet</li>
+            <li><span class="swatch swatch-empty"></span>Empty</li>
+          </ul>
+        </div>
+        <div class="bus">
+          <div class="bus-end">Front</div>
+          <ol id="bus-grid" class="bus-grid" aria-label="Seats, front to back"></ol>
+          <div class="bus-end">Back</div>
+        </div>
+      </section>
+
+      <section class="riders" aria-labelledby="riders-title">
+        <h2 id="riders-title">All riders</h2>
+        <ul id="rider-list" class="rider-list"></ul>
+      </section>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
