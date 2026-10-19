@@ -1,6 +1,6 @@
 #!/bin/sh
 # Writes web/config.js from SUPABASE_URL and SUPABASE_KEY.
-# Used as the build command on Vercel / Cloudflare Pages.
+# Used as the build command on Cloudflare Pages.
 set -eu
 
 : "${SUPABASE_URL:?SUPABASE_URL is not set}"

@@ -21,18 +21,19 @@ tests/                 node --test unit tests for the page logic
 
    Then open http://localhost:8080 for the Parent page and http://localhost:8080/admin to register an Unknown Card as a Rider, or edit and remove Riders. Run the unit tests (seat map layout, Status rules, Unknown Cards and the Riders table) with `npm test` (Node 20+, no dependencies).
 
-## Deploy
+## Deploy to Cloudflare Pages
 
-The site is static; the only build step writes `web/config.js` from two environment variables.
+The site is static; the only build step writes `web/config.js` from two environment variables. `/admin` works as is: Pages serves `web/admin/index.html` and redirects `/admin` to `/admin/`.
 
-Set these in the host's dashboard:
+1. In the Cloudflare dashboard, go to *Workers & Pages* → *Create* → *Pages* → *Connect to Git*, and pick this GitHub repo.
+2. Build settings: framework preset *None*, build command `sh scripts/build-config.sh`, build output directory `web`, root directory left empty.
+3. Under *Environment variables*, add these (for Production, and Preview if you want preview deploys to work):
 
-| Variable | Value |
-| --- | --- |
-| `SUPABASE_URL` | `https://<project>.supabase.co` |
-| `SUPABASE_KEY` | your publishable key |
+   | Variable | Value |
+   | --- | --- |
+   | `SUPABASE_URL` | `https://<project>.supabase.co` |
+   | `SUPABASE_KEY` | your publishable key (never the secret key) |
 
-- **Vercel** – import the repo; `vercel.json` already sets the build command and output folder. Leave the root directory as the repo root.
-- **Cloudflare Pages** – import the repo, framework preset *None*, build command `sh scripts/build-config.sh`, build output directory `web`.
+4. Save and deploy. The build fails with a clear message if either variable is missing.
 
-`secrets.h` and `config.js` are gitignored, so your credentials stay local.
+`secrets.h` and `config.js` are gitignored, so your credentials stay local. Note that `/admin` is open to anyone with the URL until it gets a login.
