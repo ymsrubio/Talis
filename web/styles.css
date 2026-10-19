@@ -541,6 +541,46 @@ h2 {
   .actions .btn { flex: 1 1 0; }
 }
 
+/* Admin: Riders table and remove confirm */
+
+.riders-admin { display: flex; flex-direction: column; gap: 10px; }
+.riders-admin h2:focus { outline: none; }
+
+.riders-admin-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 8px;
+}
+
+.rider-admin-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  min-height: 64px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: 12px;
+}
+.rider-admin-row.is-picked { border-color: var(--brand); }
+.rider-admin-row.is-removing { border-color: var(--warn-fg); }
+
+.rider-admin-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 160px; }
+.rider-admin-name { font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
+.rider-admin-sub { font-size: 14px; color: var(--ink2); }
+.rider-admin-row .uid { font-size: 14px; color: var(--ink2); }
+
+.remove-prompt { flex: 1 1 100%; margin: 0; font-weight: 600; }
+.is-removing .actions { flex: 1 1 100%; }
+.is-removing .actions .btn { flex: 1 1 0; }
+
+.btn-danger { background: var(--warn-fg); color: var(--warn-bg); border-color: transparent; }
+
 /* Parent page: search, loading and empty states, connection banner, footnote */
 
 .search { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
