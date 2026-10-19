@@ -11,7 +11,7 @@ tests/                 node --test unit tests for the page logic
 
 ## Setup
 
-1. **Database** – run `supabase/schema.sql` in the Supabase SQL editor. It creates `scans (id, uid, scanned_at)`, which the publishable key can add to and read; `bus_layout`, one row per seat-map cell, seeded once with the real 46-seat bus; and `riders (card_uid, name, seat)`. The publishable key can read both, and can add, rename, move and remove Riders (so `/admin` works without a login). Edit the Bus Layout in the Supabase table editor.
+1. **Database** – run `supabase/schema.sql` in the Supabase SQL editor. It creates `scans (id, uid, scanned_at)`, which the publishable key can add to and read; `bus_layout`, one row per seat-map cell, seeded once with the real 46-seat bus; and `riders (card_uid, name, seat)`, where a name is at most 80 characters. The publishable key can read both, and can add, rename, move and remove Riders (so `/admin` works without a login). Edit the Bus Layout in the Supabase table editor.
 2. **Firmware** – copy `firmware/talis_rfid/secrets.example.h` to `secrets.h` and fill in your Wi-Fi and Supabase values, then open `firmware/talis_rfid/talis_rfid.ino` in Arduino IDE (ESP32 board, `MFRC522` library) or Wokwi. Wiring: RST 32, MOSI 23, MISO 19, SCK 18, SS 4.
 3. **Website** – copy `web/config.example.js` to `web/config.js` and fill in your Supabase URL and publishable key, then serve `web/` with any static server:
 

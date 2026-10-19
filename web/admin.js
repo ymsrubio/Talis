@@ -185,6 +185,7 @@ function buildForm({ uid, mode }) {
   name.id = "rider-name";
   name.type = "text";
   name.required = true;
+  name.maxLength = 80;
   name.autocomplete = "off";
   name.value = state.name;
   name.addEventListener("input", () => {

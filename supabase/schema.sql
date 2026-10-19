@@ -72,6 +72,10 @@ create table if not exists public.riders (
     references public.bus_layout (seat) on update cascade
 );
 
+alter table public.riders drop constraint if exists riders_name_length;
+alter table public.riders add constraint riders_name_length
+  check (char_length(name) <= 80);
+
 alter table public.riders enable row level security;
 
 drop policy if exists "anon can read riders" on public.riders;
