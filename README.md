@@ -19,7 +19,7 @@ tests/                 node --test unit tests for the page logic
    python3 -m http.server 8080 --directory web
    ```
 
-   Then open http://localhost:8080. Run the unit tests with `npm test` (Node 20+, no dependencies).
+   Then open http://localhost:8080. Run the unit tests (seat map layout and Status rules) with `npm test` (Node 20+, no dependencies).
 
 ## Deploy
 
