@@ -38,13 +38,9 @@ function showNotice(text) {
 
 const timeOf = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 
-function renderMessage() {
-  const region = $("message");
+function messageBox() {
   const m = state.message;
-  if (!m) {
-    region.replaceChildren();
-    return;
-  }
+  if (!m) return null;
   const box = el("div", `message message-${m.kind}`);
   box.setAttribute("role", m.kind === "error" ? "alert" : "status");
   box.append(m.text);
@@ -53,7 +49,7 @@ function renderMessage() {
     link.href = "/";
     box.append(" ", link);
   }
-  region.replaceChildren(box);
+  return box;
 }
 
 function renderUnknownList(unknown) {
@@ -182,7 +178,6 @@ function renderPanel() {
 
   const seatField = el("div", "field");
   const seatLegend = el("span", "field-label", "Seat");
-  seatLegend.id = "seat-label";
   const bus = el("div", "bus");
   bus.append(el("div", "bus-end", "Front"), seatPicker(), el("div", "bus-end", "Back"));
   seatField.append(seatLegend, bus);
@@ -204,7 +199,9 @@ function renderPanel() {
   });
   actions.append(save, cancel);
 
-  form.append(uidField, nameField, seatField, actions);
+  // Next to Save, so the outcome is visible where the admin is looking on a phone.
+  const message = messageBox();
+  form.append(uidField, nameField, seatField, ...(message ? [message] : []), actions);
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     saveRider();
@@ -217,7 +214,8 @@ function render() {
   const focusId = active?.id;
   const caret = active?.selectionStart;
 
-  renderMessage();
+  const message = state.picked ? null : messageBox();
+  $("message").replaceChildren(...(message ? [message] : []));
   renderUnknownList(unknownCards(state.scans, state.riders));
   renderPanel();
 
