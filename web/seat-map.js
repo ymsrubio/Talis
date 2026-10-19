@@ -24,7 +24,7 @@ export function seatMap(layout, riders) {
         ...place,
         kind: "seat",
         seat: l.seat,
-        rider: r ? { name: r.name, first: firstName(r.name) } : null,
+        rider: r ? { uid: r.card_uid, name: r.name, first: firstName(r.name) } : null,
       };
     });
 

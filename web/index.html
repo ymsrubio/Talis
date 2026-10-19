@@ -17,16 +17,18 @@
         <h1>Talis</h1>
         <span id="today" class="subtitle">Bus attendance</span>
       </div>
+      <span id="live" class="live" data-state="connecting" role="status">Connecting</span>
     </header>
 
     <p id="notice" class="notice" hidden></p>
+
+    <ul id="counts" class="counts" aria-label="Today's counts"></ul>
 
     <div class="columns">
       <section class="seat-map" aria-labelledby="seat-map-title">
         <div class="section-head">
           <h2 id="seat-map-title">Seat map</h2>
-          <ul class="legend" aria-label="Legend">
-            <li><span class="swatch swatch-not"></span>Not yet</li>
+          <ul id="legend" class="legend" aria-label="Legend">
             <li><span class="swatch swatch-empty"></span>Empty</li>
           </ul>
         </div>
@@ -43,6 +45,16 @@
       </section>
     </div>
   </div>
+
+  <dialog id="details" class="sheet" aria-labelledby="details-name">
+    <div class="sheet-body">
+      <h2 id="details-name"></h2>
+      <p id="details-seat" class="sheet-seat"></p>
+      <p id="details-status"></p>
+      <p id="details-time" class="sheet-time"></p>
+      <button type="button" id="details-close" class="btn">Close</button>
+    </div>
+  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="config.js"></script>
