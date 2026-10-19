@@ -210,6 +210,13 @@ async function refreshScans({ flashChanges }) {
   update({ flashChanges });
 }
 
+async function refreshRiders() {
+  const { data, error } = await db.from("riders").select("card_uid, name, seat");
+  if (error) showNotice(`Could not load the riders: ${error.message}`);
+  else riders = data;
+  update({ flashChanges: false });
+}
+
 async function load() {
   const [layoutRes, ridersRes] = await Promise.all([
     db.from("bus_layout").select("grid_row, grid_col, col_span, seat, fixture"),
@@ -234,10 +241,12 @@ function subscribe() {
       scans.push(row);
       update({ flashChanges: true });
     })
+    .on("postgres_changes", { event: "*", schema: "public", table: "riders" }, refreshRiders)
     .subscribe((state) => {
       if (state === "SUBSCRIBED") {
         setLive("live");
-        // Catch up on Taps missed while connecting or offline.
+        // Catch up on Taps and Registrations missed while connecting or offline.
+        refreshRiders();
         refreshScans({ flashChanges: true });
       } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT" || state === "CLOSED") {
         setLive("offline");
