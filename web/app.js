@@ -1,4 +1,6 @@
 import { seatMap } from "./seat-map.js";
+import { findRiders, resultText } from "./search.js";
+import { viewState, connectionState } from "./view-state.js";
 import { STATUS_KINDS, statusByCard, statusOf, sameStatus, statusText, countStatuses } from "./status.js";
 
 const { supabaseUrl, supabaseKey } = window.TALIS_CONFIG;
@@ -15,7 +17,7 @@ const ICONS = {
 const icon = (id, size) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[id]}</svg>`;
 
-const LIVE_TEXT = { connecting: "Connecting", live: "Live", offline: "Offline" };
+const LIVE_TEXT = { connecting: "Connecting", live: "Live", offline: "Reconnecting…" };
 
 let layout = null;
 let riders = [];
@@ -23,6 +25,10 @@ let scans = [];
 let statuses = new Map();
 let openUid = null;
 let openKey = null;
+let loaded = false;
+let query = "";
+let channelState = "connecting";
+let online = navigator.onLine;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -47,6 +53,12 @@ function setLive(state) {
   live.textContent = LIVE_TEXT[state];
 }
 
+function syncConnection() {
+  const state = connectionState({ channel: channelState, online });
+  setLive(state);
+  $("offline-banner").hidden = state !== "offline";
+}
+
 function drawDate() {
   $("today").textContent =
     "Bus attendance · " + new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
@@ -69,8 +81,7 @@ function drawLegend() {
   $("legend").prepend(...items);
 }
 
-function drawCounts() {
-  const counts = countStatuses(riders, statuses);
+function drawCounts(counts) {
   $("counts").replaceChildren(
     ...["on", "off", "not"].map((kind) => {
       const li = el("li", "count");
@@ -80,9 +91,10 @@ function drawCounts() {
   );
 }
 
-function seatButton(c, status) {
+function seatButton(c, status, matched) {
   const { css, icon: iconId } = STATUS_KINDS[status.kind];
   const button = el("button", `seat seat-btn seat-${css}`);
+  button.classList.toggle("is-match", matched);
   button.type = "button";
   button.dataset.uid = c.rider.uid;
   button.dataset.key = `seat:${c.rider.uid}`;
@@ -95,7 +107,7 @@ function seatButton(c, status) {
   return button;
 }
 
-function drawSeatMap() {
+function drawSeatMap(matches) {
   const { columns, cells } = seatMap(layout, riders);
   const grid = $("bus-grid");
   grid.style.gridTemplateColumns = columns
@@ -115,20 +127,20 @@ function drawSeatMap() {
         li.classList.add("seat", "seat-empty");
         li.append(srOnly("Seat "), el("span", "seat-num", c.seat), srOnly(", empty"));
       } else {
-        li.append(seatButton(c, statusOf(statuses, c.rider.uid)));
+        li.append(seatButton(c, statusOf(statuses, c.rider.uid), matches.has(c.rider.uid)));
       }
       return li;
     }),
   );
 }
 
-function riderRow(r) {
+function riderRow(r, keyPrefix) {
   const status = statusOf(statuses, r.card_uid);
   const li = el("li");
   const button = el("button", "rider-row");
   button.type = "button";
   button.dataset.uid = r.card_uid;
-  button.dataset.key = `row:${r.card_uid}`;
+  button.dataset.key = `${keyPrefix}:${r.card_uid}`;
   const who = el("span", "rider-who");
   who.append(el("span", "rider-name", r.name), el("span", "rider-sub", `Seat ${r.seat} · ${statusText(status)}`));
   button.append(who, statusChip(status.kind));
@@ -144,7 +156,14 @@ function drawRiderList() {
     return;
   }
   const sorted = [...riders].sort((a, b) => a.name.localeCompare(b.name));
-  list.replaceChildren(...sorted.map(riderRow));
+  list.replaceChildren(...sorted.map((r) => riderRow(r, "row")));
+}
+
+function drawSearch(found) {
+  const sorted = [...found].sort((a, b) => a.name.localeCompare(b.name));
+  $("search-results").replaceChildren(...sorted.map((r) => riderRow(r, "result")));
+  $("search-count").textContent = resultText(query, found.length);
+  $("search-clear").hidden = query === "";
 }
 
 function openDetails(uid, key) {
@@ -173,9 +192,17 @@ function flash(node) {
 
 function render(changed) {
   const focusedKey = document.activeElement?.dataset?.key;
-  drawCounts();
-  drawSeatMap();
+  const counts = countStatuses(riders, statuses);
+  const found = findRiders(riders, query);
+  $("page").dataset.view = viewState({
+    loaded,
+    riderCount: riders.length,
+    boardedCount: counts.on + counts.off,
+  });
+  drawCounts(counts);
+  drawSeatMap(new Set(found.map((r) => r.card_uid)));
   drawRiderList();
+  drawSearch(found);
   for (const uid of changed) withUid(uid).forEach(flash);
   if (focusedKey) document.querySelector(`[data-key="${CSS.escape(focusedKey)}"]`)?.focus();
   if ($("details").open) fillDetails();
@@ -231,6 +258,9 @@ async function load() {
   layout = layoutRes.data;
   riders = ridersRes.data;
   await refreshScans({ flashChanges: false });
+  loaded = true;
+  $("page").removeAttribute("aria-busy");
+  render(new Set());
   subscribe();
   scheduleMidnight();
 }
@@ -244,12 +274,14 @@ function subscribe() {
     .on("postgres_changes", { event: "*", schema: "public", table: "riders" }, refreshRiders)
     .subscribe((state) => {
       if (state === "SUBSCRIBED") {
-        setLive("live");
+        channelState = "subscribed";
+        syncConnection();
         // Catch up on Taps and Registrations missed while connecting or offline.
         refreshRiders();
         refreshScans({ flashChanges: true });
       } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT" || state === "CLOSED") {
-        setLive("offline");
+        channelState = "error";
+        syncConnection();
       }
     });
 }
@@ -264,6 +296,35 @@ function scheduleMidnight() {
   }, next - now + 1000);
 }
 
+const searchInput = $("search-input");
+searchInput.addEventListener("input", () => {
+  query = searchInput.value;
+  render(new Set());
+});
+$("search-clear").addEventListener("click", () => {
+  searchInput.value = "";
+  query = "";
+  render(new Set());
+  searchInput.focus();
+});
+
+// The browser knows the network dropped before the socket times out. After
+// an offline event the channel is untrusted until it reports SUBSCRIBED again.
+window.addEventListener("offline", () => {
+  online = false;
+  channelState = "error";
+  syncConnection();
+});
+window.addEventListener("online", () => {
+  online = true;
+  syncConnection();
+  if (!loaded) load();
+  else {
+    refreshRiders();
+    refreshScans({ flashChanges: true });
+  }
+});
+
 const details = $("details");
 $("details-close").addEventListener("click", () => details.close());
 details.addEventListener("click", (e) => {
@@ -276,5 +337,5 @@ details.addEventListener("close", () => {
 
 drawDate();
 drawLegend();
-setLive("connecting");
+syncConnection();
 load();

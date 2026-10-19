@@ -580,3 +580,83 @@ h2 {
 .is-removing .actions .btn { flex: 1 1 0; }
 
 .btn-danger { background: var(--warn-fg); color: var(--warn-bg); border-color: transparent; }
+
+/* Parent page: search, loading and empty states, connection banner, footnote */
+
+.search { display: flex; flex-direction: column; gap: 8px; max-width: 520px; }
+.search-label { font-family: var(--font-display); font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
+.search-box { display: flex; gap: 8px; }
+.search-input { flex: 1 1 auto; min-width: 0; font-size: 16px; }
+.search-input::-webkit-search-cancel-button { appearance: none; }
+.search-clear { flex: none; min-width: 44px; }
+.search-clear[hidden] { display: none; }
+.search-count { margin: 0; font-size: 15px; color: var(--ink2); }
+.search-count:empty { display: none; }
+
+.seat-btn.is-match {
+  background: var(--brand);
+  color: #0F1720;
+  border: 3px solid #0F1720;
+  font-weight: 700;
+}
+
+.banner {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--warn-fg);
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  font-size: 15px;
+  font-weight: 600;
+}
+.banner[hidden] { display: none; }
+
+.footnote { margin: 0; font-size: 14px; color: var(--ink2); max-width: 520px; }
+
+.start-note,
+.empty-bus {
+  margin: 0;
+  padding: 12px 14px;
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  color: var(--ink2);
+  font-size: 16px;
+}
+.empty-bus { text-align: center; padding: 24px 14px; }
+
+.skeleton {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 0.4fr) repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.skeleton i {
+  min-height: 56px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--not-bg) 25%, var(--line) 50%, var(--not-bg) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton i { animation: none; }
+}
+
+/* One data-view on .page decides which parts show. */
+.skeleton,
+.empty-bus,
+.start-note { display: none; }
+
+[data-view="loading"] .skeleton { display: grid; }
+[data-view="loading"] .counts,
+[data-view="loading"] .search,
+[data-view="loading"] .riders,
+[data-view="loading"] .footnote,
+[data-view="loading"] #bus-grid,
+[data-view="no-riders"] #bus-grid,
+[data-view="no-riders"] .counts,
+[data-view="no-riders"] .riders,
+[data-view="no-riders"] .search,
+[data-view="no-riders"] .footnote { display: none; }
+[data-view="no-riders"] .empty-bus { display: block; }
+[data-view="start-of-day"] .start-note { display: block; }
