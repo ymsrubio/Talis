@@ -77,3 +77,16 @@ alter table public.riders enable row level security;
 drop policy if exists "anon can read riders" on public.riders;
 create policy "anon can read riders" on public.riders
   for select to anon using (true);
+
+-- /admin is open for now: anyone with the publishable key can register a Rider.
+-- The unique constraints on card_uid and seat reject clashes.
+drop policy if exists "anon can register riders" on public.riders;
+create policy "anon can register riders" on public.riders
+  for insert to anon with check (true);
+
+-- Push Rider changes to /admin live.
+do $$
+begin
+  alter publication supabase_realtime add table public.riders;
+exception when duplicate_object then null;
+end $$;

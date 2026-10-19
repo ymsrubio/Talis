@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Talis Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="page">
+    <header class="masthead">
+      <svg class="logo" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><rect x="3" y="5" width="30" height="26" rx="7" fill="#F5B800"/><rect x="7" y="9" width="22" height="9" rx="2.5" fill="#0F1720"/><circle cx="11" cy="24" r="2.2" fill="#0F1720"/><circle cx="25" cy="24" r="2.2" fill="#0F1720"/></svg>
+      <div class="wordmark">
+        <h1>Talis</h1>
+        <span id="today" class="subtitle">Admin</span>
+      </div>
+    </header>
+
+    <p id="notice" class="notice" hidden></p>
+
+    <div id="message"></div>
+
+    <div class="columns">
+      <section class="unknown-cards" aria-labelledby="unknown-title">
+        <h2 id="unknown-title">Unknown cards</h2>
+        <ul id="unknown-list" class="unknown-list"></ul>
+      </section>
+
+      <section class="register" aria-labelledby="register-title">
+        <h2 id="register-title">Register a card</h2>
+        <div id="register-panel" class="register-panel"></div>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="/config.js"></script>
+  <script type="module" src="/admin.js"></script>
+</body>
+</html>
