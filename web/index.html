@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="page">
+  <div id="page" class="page" data-view="loading" aria-busy="true">
     <header class="masthead">
       <svg class="logo" width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><rect x="3" y="5" width="30" height="26" rx="7" fill="#F5B800"/><rect x="7" y="9" width="22" height="9" rx="2.5" fill="#0F1720"/><circle cx="11" cy="24" r="2.2" fill="#0F1720"/><circle cx="25" cy="24" r="2.2" fill="#0F1720"/></svg>
       <div class="wordmark">
@@ -21,8 +21,21 @@
     </header>
 
     <p id="notice" class="notice" hidden></p>
+    <p id="offline-banner" class="banner" role="status" hidden>Connection lost. What you see may be out of date.</p>
 
     <ul id="counts" class="counts" aria-label="Today's counts"></ul>
+
+    <p class="start-note">No one has boarded yet today.</p>
+
+    <section class="search" aria-labelledby="search-label">
+      <label id="search-label" class="search-label" for="search-input">Find your child</label>
+      <div class="search-box">
+        <input id="search-input" class="text-input search-input" type="search" placeholder="Type a name" autocomplete="off" autocapitalize="none" spellcheck="false" enterkeyhint="search">
+        <button id="search-clear" class="btn search-clear" type="button" hidden>Clear</button>
+      </div>
+      <p id="search-count" class="search-count" role="status" aria-live="polite"></p>
+      <ul id="search-results" class="rider-list"></ul>
+    </section>
 
     <div class="columns">
       <section class="seat-map" aria-labelledby="seat-map-title">
@@ -34,6 +47,17 @@
         </div>
         <div class="bus">
           <div class="bus-end">Front</div>
+          <div class="skeleton" aria-hidden="true">
+            <i></i><i></i><b></b><i></i><i></i>
+            <i></i><i></i><b></b><i></i><i></i>
+            <i></i><i></i><b></b><i></i><i></i>
+            <i></i><i></i><b></b><i></i><i></i>
+            <i></i><i></i><b></b><i></i><i></i>
+            <i></i><i></i><b></b><i></i><i></i>
+            <i></i><i></i><b></b><i></i><i></i>
+            <i></i><i></i><b></b><i></i><i></i>
+          </div>
+          <p class="empty-bus">The bus is empty. Riders will appear here once they are registered.</p>
           <ol id="bus-grid" class="bus-grid" aria-label="Seats, front to back"></ol>
           <div class="bus-end">Back</div>
         </div>
@@ -44,6 +68,8 @@
         <ul id="rider-list" class="rider-list"></ul>
       </section>
     </div>
+
+    <p class="footnote">Status comes from card taps. If a child forgets to tap off, they will still show as On bus.</p>
   </div>
 
   <dialog id="details" class="sheet" aria-labelledby="details-name">
