@@ -11,7 +11,7 @@ tests/                 node --test unit tests for the page logic
 
 ## Setup
 
-1. **Database** – run `supabase/schema.sql` in the Supabase SQL editor. It creates `scans (id, uid, scanned_at)`, which the publishable key can add to and read; `bus_layout`, one row per seat-map cell, seeded once with the real 46-seat bus; and `riders (card_uid, name, seat)`. The publishable key can read both, and can add Riders (so `/admin` works without a login). Edit the Bus Layout in the Supabase table editor.
+1. **Database** – run `supabase/schema.sql` in the Supabase SQL editor. It creates `scans (id, uid, scanned_at)`, which the publishable key can add to and read; `bus_layout`, one row per seat-map cell, seeded once with the real 46-seat bus; and `riders (card_uid, name, seat)`. The publishable key can read both, and only a signed-in admin can add Riders (names are capped at 80 characters). Edit the Bus Layout in the Supabase table editor.
 2. **Firmware** – copy `firmware/talis_rfid/secrets.example.h` to `secrets.h` and fill in your Wi-Fi and Supabase values, then open `firmware/talis_rfid/talis_rfid.ino` in Arduino IDE (ESP32 board, `MFRC522` library) or Wokwi. Wiring: RST 32, MOSI 23, MISO 19, SCK 18, SS 4.
 3. **Website** – copy `web/config.example.js` to `web/config.js` and fill in your Supabase URL and publishable key, then serve `web/` with any static server:
 
@@ -20,6 +20,12 @@ tests/                 node --test unit tests for the page logic
    ```
 
    Then open http://localhost:8080 for the Parent page and http://localhost:8080/admin to register an Unknown Card as a Rider. Run the unit tests (seat map layout, Status rules and Unknown Cards) with `npm test` (Node 20+, no dependencies).
+
+## Admin login
+
+`/admin` needs a Supabase Auth email and password. There is no public signup, so create each admin in the Supabase dashboard: **Authentication → Users → Add user → Create new user** (tick *Auto Confirm User*). Only a signed-in user can add Riders.
+
+To pick up schema changes (for example after pulling this), re-run the whole `supabase/schema.sql` in the SQL editor. It is safe to re-run.
 
 ## Deploy
 

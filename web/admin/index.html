@@ -17,8 +17,26 @@
         <h1>Talis</h1>
         <span id="today" class="subtitle">Admin</span>
       </div>
+      <button id="sign-out" type="button" class="btn btn-secondary" hidden>Sign out</button>
     </header>
 
+    <section id="login" class="register" hidden aria-labelledby="login-title">
+      <h2 id="login-title">Admin sign in</h2>
+      <form id="login-form" class="register-form">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" class="text-input" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" class="text-input" type="password" autocomplete="current-password" required>
+        </div>
+        <p id="login-error" class="message message-error" role="alert" hidden></p>
+        <div class="actions"><button id="login-submit" class="btn btn-primary" type="submit">Sign in</button></div>
+      </form>
+    </section>
+
+    <div id="admin-app" hidden>
     <p id="notice" class="notice" hidden></p>
 
     <div id="message"></div>
@@ -33,6 +51,7 @@
         <h2 id="register-title">Register a card</h2>
         <div id="register-panel" class="register-panel"></div>
       </section>
+    </div>
     </div>
   </div>
 

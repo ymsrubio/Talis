@@ -540,3 +540,6 @@ h2 {
   .unknown-row .btn { width: 100%; }
   .actions .btn { flex: 1 1 0; }
 }
+
+#sign-out { margin-left: auto; }
+#login[hidden], #admin-app[hidden], #sign-out[hidden] { display: none; }

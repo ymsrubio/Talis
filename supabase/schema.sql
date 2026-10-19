@@ -78,11 +78,31 @@ drop policy if exists "anon can read riders" on public.riders;
 create policy "anon can read riders" on public.riders
   for select to anon using (true);
 
--- /admin is open for now: anyone with the publishable key can register a Rider.
+-- Only a signed-in admin can register a Rider. Admin users are created in the
+-- Supabase dashboard (Authentication, Users); there is no public signup.
 -- The unique constraints on card_uid and seat reject clashes.
 drop policy if exists "anon can register riders" on public.riders;
-create policy "anon can register riders" on public.riders
-  for insert to anon with check (true);
+drop policy if exists "admins can register riders" on public.riders;
+create policy "admins can register riders" on public.riders
+  for insert to authenticated with check (true);
+
+-- Admins read Riders and scans too (the policies above are for anon only).
+drop policy if exists "authenticated can read riders" on public.riders;
+create policy "authenticated can read riders" on public.riders
+  for select to authenticated using (true);
+
+drop policy if exists "authenticated can read scans" on public.scans;
+create policy "authenticated can read scans" on public.scans
+  for select to authenticated using (true);
+
+drop policy if exists "authenticated can read bus layout" on public.bus_layout;
+create policy "authenticated can read bus layout" on public.bus_layout
+  for select to authenticated using (true);
+
+-- Rider names show on the public Parent page, so keep them short.
+alter table public.riders drop constraint if exists riders_name_length;
+alter table public.riders
+  add constraint riders_name_length check (char_length(name) <= 80);
 
 -- Push Rider changes to /admin live.
 do $$

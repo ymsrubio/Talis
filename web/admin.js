@@ -169,6 +169,7 @@ function buildForm(uid) {
   name.id = "rider-name";
   name.type = "text";
   name.required = true;
+  name.maxLength = 80;
   name.autocomplete = "off";
   name.value = state.name;
   name.addEventListener("input", () => {
@@ -299,7 +300,7 @@ async function saveRider() {
       state.name = "";
       state.message = { kind: "error", text: "This card was registered meanwhile. Nothing was saved." };
     } else if (error.code === "23514") {
-      state.message = { kind: "error", text: "The Rider name must not be blank. Nothing was saved." };
+      state.message = { kind: "error", text: "The Rider name must not be blank or longer than 80 characters. Nothing was saved." };
     } else {
       state.message = { kind: "error", text: `Could not save: ${error.message}. Nothing was saved.` };
     }
@@ -361,15 +362,60 @@ function scheduleMidnight() {
   }, next - now + 1000);
 }
 
-drawDate();
-scheduleMidnight();
+let started = false;
+function start() {
+  if (started) return;
+  started = true;
+  drawDate();
+  scheduleMidnight();
+  db.channel("admin")
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "scans" }, load)
+    .on("postgres_changes", { event: "*", schema: "public", table: "riders" }, load)
+    .subscribe((status) => {
+      // Catch up on Taps missed before the first join or while offline.
+      if (status === "SUBSCRIBED") load();
+    });
+  load();
+}
 
-db.channel("admin")
-  .on("postgres_changes", { event: "INSERT", schema: "public", table: "scans" }, load)
-  .on("postgres_changes", { event: "*", schema: "public", table: "riders" }, load)
-  .subscribe((status) => {
-    // Catch up on Taps missed before the first join or while offline.
-    if (status === "SUBSCRIBED") load();
+function showSignedIn(signedIn) {
+  $("login").hidden = signedIn;
+  $("admin-app").hidden = !signedIn;
+  $("sign-out").hidden = !signedIn;
+}
+
+$("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const button = $("login-submit");
+  const error = $("login-error");
+  button.disabled = true;
+  error.hidden = true;
+  const { error: err } = await db.auth.signInWithPassword({
+    email: $("login-email").value.trim(),
+    password: $("login-password").value,
   });
+  button.disabled = false;
+  if (err) {
+    error.textContent = err.status === 400 || /invalid/i.test(err.message)
+      ? "Wrong email or password."
+      : `Could not sign in: ${err.message}`;
+    error.hidden = false;
+    $("login-password").value = "";
+    $("login-password").focus();
+  }
+});
 
-load();
+$("sign-out").addEventListener("click", () => db.auth.signOut());
+
+// Fires with INITIAL_SESSION on load (restored from storage), then on sign-in/out.
+db.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    showSignedIn(true);
+    // Realtime must carry the admin's token so RLS lets it see Rider changes.
+    db.realtime.setAuth(session.access_token);
+    start();
+  } else {
+    showSignedIn(false);
+    if (started) location.reload();
+  }
+});
