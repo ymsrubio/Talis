@@ -54,6 +54,7 @@ function messageBox() {
 
 function renderUnknownList(unknown) {
   const list = $("unknown-list");
+  const focusedUid = list.contains(document.activeElement) ? document.activeElement.dataset.uid : null;
   if (unknown.length === 0) {
     const empty = state.scans.length === 0
       ? ["Nothing to register yet", "Tap a new card on the reader and it will show up here."]
@@ -86,10 +87,12 @@ function renderUnknownList(unknown) {
         render();
         $("rider-name")?.focus();
       });
+      button.dataset.uid = card.uid;
       li.append(who, button);
       return li;
     }),
   );
+  if (focusedUid) list.querySelector(`[data-uid="${CSS.escape(focusedUid)}"]`)?.focus();
 }
 
 function seatPicker() {
@@ -142,24 +145,22 @@ function seatPicker() {
   return grid;
 }
 
-function renderPanel() {
-  const panel = $("register-panel");
-  if (!state.picked) {
-    panel.replaceChildren(el("p", "empty-note", "Pick a card from Unknown cards to give it a name and a Seat."));
-    return;
-  }
+// The form is built once per picked card and then updated in place, so a live
+// update never replaces the name input while someone is typing (iOS would
+// close the keyboard).
+let form = null;
 
-  const noFreeSeat = !seatMap(state.layout, state.riders).cells.some((c) => c.kind === "seat" && !c.rider);
-
+function buildForm(uid) {
   const form = el("form", "register-form");
   form.noValidate = true;
+  form.dataset.uid = uid;
 
   const uidField = el("div", "field");
   const uidLabel = el("label", null, "Card UID");
   uidLabel.htmlFor = "card-uid";
-  const uid = el("output", "uid uid-output", state.picked.uid);
-  uid.id = "card-uid";
-  uidField.append(uidLabel, uid);
+  const uidOut = el("output", "uid uid-output", uid);
+  uidOut.id = "card-uid";
+  uidField.append(uidLabel, uidOut);
 
   const nameField = el("div", "field");
   const nameLabel = el("label", null, "Rider name");
@@ -170,26 +171,31 @@ function renderPanel() {
   name.required = true;
   name.autocomplete = "off";
   name.value = state.name;
-  name.disabled = state.saving;
   name.addEventListener("input", () => {
     state.name = name.value;
   });
   nameField.append(nameLabel, name);
 
   const seatField = el("div", "field");
-  const seatLegend = el("span", "field-label", "Seat");
   const bus = el("div", "bus");
-  bus.append(el("div", "bus-end", "Front"), seatPicker(), el("div", "bus-end", "Back"));
-  seatField.append(seatLegend, bus);
-  if (noFreeSeat) seatField.append(el("p", "message message-error", "There is no free seat on this bus"));
+  const seats = el("div");
+  seats.id = "seat-slot";
+  bus.append(el("div", "bus-end", "Front"), seats, el("div", "bus-end", "Back"));
+  const full = el("p", "message message-error", "There is no free seat on this bus");
+  full.id = "no-free-seat";
+  seatField.append(el("span", "field-label", "Seat"), bus, full);
+
+  // Next to Save, so the outcome is visible where the admin is looking on a phone.
+  const message = el("div");
+  message.id = "form-message";
 
   const actions = el("div", "actions");
-  const save = el("button", "btn btn-primary", state.saving ? "Saving…" : "Save Rider");
+  const save = el("button", "btn btn-primary");
+  save.id = "save-rider";
   save.type = "submit";
-  save.disabled = state.saving || noFreeSeat;
   const cancel = el("button", "btn btn-secondary", "Cancel");
+  cancel.id = "cancel-register";
   cancel.type = "button";
-  cancel.disabled = state.saving;
   cancel.addEventListener("click", () => {
     state.picked = null;
     state.seat = null;
@@ -199,33 +205,58 @@ function renderPanel() {
   });
   actions.append(save, cancel);
 
-  // Next to Save, so the outcome is visible where the admin is looking on a phone.
-  const message = messageBox();
-  form.append(uidField, nameField, seatField, ...(message ? [message] : []), actions);
+  form.append(uidField, nameField, seatField, message, actions);
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     saveRider();
   });
-  panel.replaceChildren(form);
+  return form;
+}
+
+function updateForm() {
+  const noFreeSeat = !seatMap(state.layout, state.riders).cells.some((c) => c.kind === "seat" && !c.rider);
+
+  const name = $("rider-name");
+  if (name.value !== state.name) name.value = state.name;
+  name.disabled = state.saving;
+
+  const slot = $("seat-slot");
+  const focusedSeat = slot.contains(document.activeElement) ? document.activeElement.id : null;
+  slot.replaceChildren(seatPicker());
+  if (focusedSeat) {
+    const again = $(focusedSeat);
+    if (again && !again.disabled) again.focus();
+  }
+
+  $("no-free-seat").hidden = !noFreeSeat;
+  const message = messageBox();
+  $("form-message").replaceChildren(...(message ? [message] : []));
+
+  const save = $("save-rider");
+  save.textContent = state.saving ? "Saving…" : "Save Rider";
+  save.disabled = state.saving || noFreeSeat;
+  $("cancel-register").disabled = state.saving;
+}
+
+function renderPanel() {
+  const panel = $("register-panel");
+  if (!state.picked) {
+    form = null;
+    panel.replaceChildren(el("p", "empty-note", "Pick a card from Unknown cards to give it a name and a Seat."));
+    return;
+  }
+  if (form?.dataset.uid !== state.picked.uid) {
+    form = buildForm(state.picked.uid);
+    panel.replaceChildren(form);
+  }
+  updateForm();
 }
 
 function render() {
-  const active = document.activeElement;
-  const focusId = active?.id;
-  const caret = active?.selectionStart;
-
   const message = state.picked ? null : messageBox();
   $("message").replaceChildren(...(message ? [message] : []));
   renderUnknownList(unknownCards(state.scans, state.riders));
   renderPanel();
-
-  if (focusId) {
-    const again = $(focusId);
-    if (again && !again.disabled) {
-      again.focus();
-      if (caret != null && again.setSelectionRange) again.setSelectionRange(caret, caret);
-    }
-  }
 }
 
 async function saveRider() {
@@ -283,7 +314,9 @@ function reconcile() {
     state.seat = null;
     state.message = { kind: "error", text: `Seat ${seat} was just taken. Pick another Seat.` };
   }
-  if (state.picked && !unknownCards(state.scans, state.riders).some((c) => c.uid === state.picked.uid)) {
+  // Only a Rider taking the card closes the panel; a card that just dropped out
+  // of today's list at midnight is still unknown and can still be registered.
+  if (state.picked && state.riders.some((r) => r.card_uid === state.picked.uid)) {
     state.picked = null;
     state.seat = null;
     state.name = "";
@@ -313,12 +346,30 @@ async function load() {
   render();
 }
 
-$("today").textContent =
-  "Admin · " + new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+function drawDate() {
+  $("today").textContent =
+    "Admin · " + new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+}
+
+function scheduleMidnight() {
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  setTimeout(() => {
+    drawDate();
+    load();
+    scheduleMidnight();
+  }, next - now + 1000);
+}
+
+drawDate();
+scheduleMidnight();
 
 db.channel("admin")
   .on("postgres_changes", { event: "INSERT", schema: "public", table: "scans" }, load)
   .on("postgres_changes", { event: "*", schema: "public", table: "riders" }, load)
-  .subscribe();
+  .subscribe((status) => {
+    // Catch up on Taps missed before the first join or while offline.
+    if (status === "SUBSCRIBED") load();
+  });
 
 load();
