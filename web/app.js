@@ -1,81 +1,98 @@
+import { seatMap } from "./seat-map.js";
+
 const { supabaseUrl, supabaseKey } = window.TALIS_CONFIG;
 const db = supabase.createClient(supabaseUrl, supabaseKey);
 
-const RECENT_LIMIT = 50;
-const POLL_MS = 10000;
-
-let scans = [];
-
 const $ = (id) => document.getElementById(id);
 
-function fmtTime(iso) {
-  return new Date(iso).toLocaleString();
+const clockIcon = (size) => `<svg width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2.2 1.4"/></svg>`;
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
 }
 
-function setStatus(text, ok) {
-  const el = $("status");
-  el.textContent = text;
-  el.className = "status " + (ok ? "ok" : "bad");
+function srOnly(text) {
+  return el("span", "sr-only", text);
 }
 
-function render() {
-  $("total").textContent = scans.length;
+function showNotice(text) {
+  const notice = $("notice");
+  notice.textContent = text;
+  notice.hidden = !text;
+}
 
-  const byUid = new Map();
-  for (const s of scans) {
-    const c = byUid.get(s.uid) || { count: 0, last: s.scanned_at };
-    c.count++;
-    if (s.scanned_at > c.last) c.last = s.scanned_at;
-    byUid.set(s.uid, c);
+function drawSeatMap(layout, riders) {
+  const { columns, cells } = seatMap(layout, riders);
+  const grid = $("bus-grid");
+  grid.style.gridTemplateColumns = columns
+    .map((c) => (c === "aisle" ? "minmax(0, 0.4fr)" : "minmax(0, 1fr)"))
+    .join(" ");
+
+  grid.replaceChildren(
+    ...cells.map((c) => {
+      const li = el("li", "cell");
+      li.style.gridRow = String(c.row);
+      li.style.gridColumn = `${c.col} / span ${c.span}`;
+
+      if (c.kind === "fixture") {
+        li.classList.add("fixture");
+        li.textContent = c.label;
+      } else if (!c.rider) {
+        li.classList.add("seat", "seat-empty");
+        li.append(srOnly("Seat "), el("span", "seat-num", c.seat), srOnly(", empty"));
+      } else {
+        li.classList.add("seat", "seat-not");
+        const top = el("span", "seat-top");
+        top.append(srOnly("Seat "), el("span", "seat-num", c.seat));
+        top.insertAdjacentHTML("beforeend", clockIcon(14));
+        li.append(top, el("span", "seat-name", c.rider.first), srOnly(", Not yet"));
+        li.title = c.rider.name;
+      }
+      return li;
+    }),
+  );
+}
+
+function drawRiderList(riders) {
+  const list = $("rider-list");
+  if (riders.length === 0) {
+    list.replaceChildren(el("li", "empty-note", "No riders yet. Riders will appear here once they are registered."));
+    return;
   }
-  $("unique").textContent = byUid.size;
-  $("last").textContent = scans[0] ? fmtTime(scans[0].scanned_at) : "–";
-
-  const feed = scans.slice(0, RECENT_LIMIT);
-  $("feed").innerHTML = feed.length
-    ? feed.map((s) => `<tr data-id="${s.id}"><td class="uid">${esc(s.uid)}</td><td>${fmtTime(s.scanned_at)}</td></tr>`).join("")
-    : `<tr><td colspan="2" class="empty">No scans yet. Tap a card on the reader.</td></tr>`;
-
-  const cards = [...byUid.entries()].sort((a, b) => (a[1].last < b[1].last ? 1 : -1));
-  $("cards").innerHTML = cards.length
-    ? cards.map(([uid, c]) => `<tr><td class="uid">${esc(uid)}</td><td>${c.count}</td><td>${fmtTime(c.last)}</td></tr>`).join("")
-    : `<tr><td colspan="3" class="empty">–</td></tr>`;
-}
-
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+  const sorted = [...riders].sort((a, b) => a.name.localeCompare(b.name));
+  list.replaceChildren(
+    ...sorted.map((r) => {
+      const li = el("li", "rider-row");
+      const who = el("span", "rider-who");
+      who.append(el("span", "rider-name", r.name), el("span", "rider-sub", `Seat ${r.seat} · No tap yet`));
+      const badge = el("span", "badge badge-not");
+      badge.innerHTML = clockIcon(16);
+      badge.append("Not yet");
+      li.append(who, badge);
+      return li;
+    }),
+  );
 }
 
 async function load() {
-  const { data, error } = await db
-    .from("scans")
-    .select("id, uid, scanned_at")
-    .order("scanned_at", { ascending: false })
-    .limit(1000);
+  const [layout, riders] = await Promise.all([
+    db.from("bus_layout").select("grid_row, grid_col, col_span, seat, fixture"),
+    db.from("riders").select("name, seat"),
+  ]);
+  const error = layout.error || riders.error;
   if (error) {
-    setStatus("Error: " + error.message, false);
+    showNotice(`Could not load the bus: ${error.message}`);
     return;
   }
-  scans = data;
-  render();
+  showNotice("");
+  drawSeatMap(layout.data, riders.data);
+  drawRiderList(riders.data);
 }
 
-function flashNewest() {
-  const row = $("feed").firstElementChild;
-  if (row) row.classList.add("new");
-}
-
-db.channel("scans")
-  .on("postgres_changes", { event: "INSERT", schema: "public", table: "scans" }, ({ new: row }) => {
-    if (scans.some((s) => s.id === row.id)) return;
-    scans.unshift(row);
-    render();
-    flashNewest();
-  })
-  .subscribe((state) => {
-    if (state === "SUBSCRIBED") setStatus("Live", true);
-    else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT") setStatus("Polling", true);
-  });
+$("today").textContent =
+  "Bus attendance · " + new Date().toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 
 load();
-setInterval(load, POLL_MS);

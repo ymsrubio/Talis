@@ -1,16 +1,17 @@
 # Talis
 
-ESP32 + MFRC522 RFID reader that posts every card scan to Supabase, plus a website that shows the scans live.
+ESP32 + MFRC522 RFID reader that posts every Card read to Supabase, plus a Parent page that draws the bus seat map with each Rider in their Seat. Domain terms are in `GLOSSARY.md`.
 
 ```
 firmware/talis_rfid/   ESP32 sketch (Arduino / Wokwi)
-supabase/schema.sql    scans table, RLS policies, realtime
-web/                   static dashboard (no build step)
+supabase/schema.sql    scans, bus_layout and riders tables, RLS policies
+web/                   static Parent page (no build step)
+tests/                 node --test unit tests for the page logic
 ```
 
 ## Setup
 
-1. **Database** – run `supabase/schema.sql` in the Supabase SQL editor. It creates `scans (id, uid, scanned_at)` and lets the publishable key add and read scans.
+1. **Database** – run `supabase/schema.sql` in the Supabase SQL editor. It creates `scans (id, uid, scanned_at)`, which the publishable key can add to and read; `bus_layout`, one row per seat-map cell, seeded once with the real 46-seat bus; and `riders (card_uid, name, seat)`. The publishable key can read the last two. Add Riders and edit the Bus Layout in the Supabase table editor.
 2. **Firmware** – copy `firmware/talis_rfid/secrets.example.h` to `secrets.h` and fill in your Wi-Fi and Supabase values, then open `firmware/talis_rfid/talis_rfid.ino` in Arduino IDE (ESP32 board, `MFRC522` library) or Wokwi. Wiring: RST 32, MOSI 23, MISO 19, SCK 18, SS 4.
 3. **Website** – copy `web/config.example.js` to `web/config.js` and fill in your Supabase URL and publishable key, then serve `web/` with any static server:
 
@@ -18,7 +19,7 @@ web/                   static dashboard (no build step)
    python3 -m http.server 8080 --directory web
    ```
 
-   Then open http://localhost:8080.
+   Then open http://localhost:8080. Run the unit tests with `npm test` (Node 20+, no dependencies).
 
 ## Deploy
 
