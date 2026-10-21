@@ -32,7 +32,6 @@ Set these in the host's dashboard:
 | `SUPABASE_URL` | `https://<project>.supabase.co` |
 | `SUPABASE_KEY` | your publishable key |
 
-- **Vercel** – import the repo; `vercel.json` already sets the build command and output folder. Leave the root directory as the repo root.
 - **Cloudflare Pages** – import the repo, framework preset *None*, build command `sh scripts/build-config.sh`, build output directory `web`.
 
 `secrets.h` and `config.js` are gitignored, so your credentials stay local.
